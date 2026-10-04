@@ -1,6 +1,6 @@
 # StockFlow MVP ER 图
 
-对应 [001_init_schema.sql](../backend/database/001_init_schema.sql)。这里只展示关键字段，完整列定义以 SQL 为准。
+对应 [001_init_schema.sql](../backend/database/001_init_schema.sql)。Issue #3 的 [002 升级脚本](../backend/database/002_product_enabled.sql) 增加商品启用状态。这里只展示关键字段，完整列定义以 SQL 为准。
 `||` 表示一个，`o{` 表示零到多个；FK 是外键，UK 是唯一键。
 
 ```mermaid
@@ -50,6 +50,7 @@ erDiagram
         BIGINT id PK
         BIGINT category_id FK
         VARCHAR name
+        TINYINT enabled
     }
     sku {
         BIGINT id PK
