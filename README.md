@@ -51,10 +51,12 @@ Redis and RabbitMQ will be introduced only when a real project requirement justi
 
 See `docs/product-requirements.md` for the MVP product requirements and engineering constraints.
 
-## Current baseline (Issue #1)
+数据库结构见 [设计与执行说明](docs/database-design.md) 和 [ER 图](docs/database-er.md)。
 
-当前只实现前端 → Spring Boot → MySQL 的最小闭环。上面的 MVP 是后续规划，并非已实现功能。
-后端是单体应用，没有业务表、登录、JWT、RBAC、库存逻辑、Docker 或中间件。
+## Current baseline (Issues #1–2)
+
+当前已实现前端 → Spring Boot → MySQL 的最小闭环，并提供 15 张 MVP 表的建表脚本、ER 图和数据库约束测试。
+上面的 MVP 业务功能是后续规划，并非已实现。后端仍是单体应用，未实现登录、JWT、RBAC、库存逻辑、Docker 或中间件。
 
 ```text
 backend/    Java 21 / Spring Boot 4.1.1 / MyBatis-Plus 3.5.17
@@ -63,7 +65,7 @@ docs/       产品需求
 ```
 
 后端包：`com.stockflow` 下的 `config`、`controller`、`service`、`mapper`、`dto`、`common`、`exception`。
-请求路径为 Controller → Service → Mapper → MySQL。当前没有实体表，暂不创建空的 entity 包。
+请求路径为 Controller → Service → Mapper → MySQL。业务表结构已定义，但尚未实现其 Java 实体和业务接口，暂不创建空的 entity 包。
 
 ## Requirements
 
@@ -75,7 +77,7 @@ docs/       产品需求
 | Maven | 3.9.x | [Maven](https://maven.apache.org/download.cgi) | `mvn -version` |
 | Node.js | 22.12+，推荐 24 LTS | [Node.js](https://nodejs.org/en/download) | `node -v` |
 | npm | 随 Node.js 安装 | 同上 | `npm -v` |
-| MySQL Server | 8.x | [MySQL Community](https://dev.mysql.com/downloads/mysql/) | `mysql --version` |
+| MySQL Server | 8.0.16+（支持执行 CHECK 约束） | [MySQL Community](https://dev.mysql.com/downloads/mysql/) | `mysql --version` |
 | Git | 用于克隆仓库 | [Git](https://git-scm.com/downloads) | `git --version` |
 
 MySQL Workbench 只是图形客户端，仍需安装并启动 MySQL Server。
@@ -103,8 +105,22 @@ CREATE USER 'stockflow'@'localhost' IDENTIFIED BY 'REPLACE_WITH_YOUR_LOCAL_PASSW
 GRANT SELECT ON stockflow.* TO 'stockflow'@'localhost';
 ```
 
-这里只创建空数据库及开发账户，不创建业务表。Issue #1 只需 SELECT；后续建表和权限变更按对应 Issue 处理。
+以上先创建空数据库及开发账户。Health API 只需 SELECT，本次不扩大运行时账户权限。
 若数据库或用户已存在，请使用已有配置，不要重复创建或删除重建。
+
+### Initialize the schema (Issue #2)
+
+用管理员连接选择空的 `stockflow` 数据库，再执行
+[`backend/database/001_init_schema.sql`](backend/database/001_init_schema.sql)。
+Workbench 可通过 File → Open SQL Script 打开文件并执行全部内容；先确认默认 Schema 是 `stockflow`。
+命令行客户端也可在登录后执行 `SOURCE <建表脚本的绝对路径>;`。
+
+脚本创建全部 15 张表和流水的两个只追加保护触发器，没有种子账户或业务数据。
+不要对已有业务表的数据库重复执行；脚本不会 DROP 或覆盖数据，也不会被 Spring Boot 自动执行。
+建表是管理员操作，后端依然使用 `stockflow` 账户。已有的库级 SELECT 授权会覆盖新表。
+
+沿用本机专用环境时，请使用 `127.0.0.1:3307`，而不是上面的通用默认端口 3306。
+完整的 Workbench 步骤、权限说明、设计取舍和 VS Code 测试命令见 [数据库设计文档](docs/database-design.md)。
 
 后端通过环境变量配置连接：
 
@@ -210,6 +226,16 @@ npm run dev
 ```
 
 最后在浏览器访问首页，确认 UP；仅构建成功不代表数据库和前后端已连通。
+
+数据库结构的独立验收（Node.js + MySQL CLI，无额外 npm 依赖）：
+
+```bash
+node backend/database/verify-schema.mjs
+```
+
+从仓库根目录运行，先通过环境变量设置 `DB_HOST`、`DB_PORT`、`DB_USERNAME`、`DB_PASSWORD` 和可选 `MYSQL_BIN`。
+本测试需要管理员权限，会创建随机命名的独立测试数据库并在结束时删除它；不修改开发库。
+具体配置示例见 [数据库验收步骤](docs/database-design.md#8-可重复验收vs-code)。
 
 ## Troubleshooting
 
