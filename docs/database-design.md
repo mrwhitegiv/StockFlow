@@ -1,6 +1,7 @@
 # MVP 数据库设计（Issue #2）
 
-本次只定义数据库结构，不实现登录、业务接口、订单流转或库存服务。
+本文记录 Issue #2 基线。Issue #3 通过 [002 升级脚本](../backend/database/002_product_enabled.sql) 增加 product.enabled；
+当前接口与账户写入授权见 [基础资料管理说明](master-data.md)。下文的“本次”指 Issue #2。
 
 - 建表脚本：[001_init_schema.sql](../backend/database/001_init_schema.sql)
 - 关系图：[database-er.md](database-er.md)

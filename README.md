@@ -53,10 +53,11 @@ See `docs/product-requirements.md` for the MVP product requirements and engineer
 
 数据库结构见 [设计与执行说明](docs/database-design.md) 和 [ER 图](docs/database-er.md)。
 
-## Current baseline (Issues #1–2)
+## Current baseline (Issues #1–3)
 
 当前已实现前端 → Spring Boot → MySQL 的最小闭环，并提供 15 张 MVP 表的建表脚本、ER 图和数据库约束测试。
-上面的 MVP 业务功能是后续规划，并非已实现。后端仍是单体应用，未实现登录、JWT、RBAC、库存逻辑、Docker 或中间件。
+已提供分类、商品、SKU、仓库管理 API 与页面，包括分页、校验、商品禁用和数据库约束保护。
+后端仍是单体应用，未实现登录、JWT、RBAC、库存逻辑、Docker 或中间件。
 
 ```text
 backend/    Java 21 / Spring Boot 4.1.1 / MyBatis-Plus 3.5.17
@@ -65,7 +66,7 @@ docs/       产品需求
 ```
 
 后端包：`com.stockflow` 下的 `config`、`controller`、`service`、`mapper`、`dto`、`common`、`exception`。
-请求路径为 Controller → Service → Mapper → MySQL。业务表结构已定义，但尚未实现其 Java 实体和业务接口，暂不创建空的 entity 包。
+请求路径为 Controller → Service → Mapper → MySQL。entity 包映射分类、商品、SKU 和仓库。接口及学习路线见 [Issue #3 使用说明](docs/master-data.md)。
 
 ## Requirements
 
@@ -105,7 +106,7 @@ CREATE USER 'stockflow'@'localhost' IDENTIFIED BY 'REPLACE_WITH_YOUR_LOCAL_PASSW
 GRANT SELECT ON stockflow.* TO 'stockflow'@'localhost';
 ```
 
-以上先创建空数据库及开发账户。Health API 只需 SELECT，本次不扩大运行时账户权限。
+以上先创建空数据库及开发账户。Health API 只需 SELECT；Issue #3 还需按下文为四张基础资料表授权写入。
 若数据库或用户已存在，请使用已有配置，不要重复创建或删除重建。
 
 ### Initialize the schema (Issue #2)
@@ -122,6 +123,13 @@ Workbench 可通过 File → Open SQL Script 打开文件并执行全部内容�
 沿用本机专用环境时，请使用 `127.0.0.1:3307`，而不是上面的通用默认端口 3306。
 完整的 Workbench 步骤、权限说明、设计取舍和 VS Code 测试命令见 [数据库设计文档](docs/database-design.md)。
 
+### Upgrade for Issue #3
+
+已有 Issue #2 表结构时，只执行 [002_product_enabled.sql](backend/database/002_product_enabled.sql) 一次。
+新环境按 001 → 002 顺序执行；002 保留数据并将已有商品设为启用。
+再按 [升级与授权步骤](docs/master-data.md#1-从-issue-2-升级) 为普通后端账户添加四张表的最小写入权限。
+不要重新执行 001 或让后端使用 root。
+
 后端通过环境变量配置连接：
 
 | 环境变量 | 默认值 | 说明 |
@@ -131,6 +139,7 @@ Workbench 可通过 File → Open SQL Script 打开文件并执行全部内容�
 | `DB_NAME` | `stockflow` | 数据库名 |
 | `DB_USERNAME` | `stockflow` | 数据库用户 |
 | `DB_PASSWORD` | 空 | 设置为上面创建用户时的密码 |
+| `SERVER_ADDRESS` | `127.0.0.1` | 默认仅供本机开发访问 |
 | `SERVER_PORT` | `8080` | 后端 HTTP 端口 |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | 多个明确来源用逗号分隔 |
 
@@ -183,6 +192,7 @@ npm run dev
 
 打开 [首页](http://localhost:5173)，页面自动调用后端并显示 `Backend Status: UP`。
 连接失败时显示 DOWN 和提示；修复后点击“重新检查”。
+导航栏可进入分类管理、商品管理和仓库管理，商品行内进入 SKU 管理。首次使用先创建分类。
 `package-lock.json` 固定安装结果，后续可使用 `npm ci` 重现依赖。
 
 默认 API 地址是 `http://localhost:8080/api`。需要修改时，将 `frontend/.env.example`
@@ -194,8 +204,8 @@ npm run dev
 请使用 `localhost:5173`，若要用 `127.0.0.1:5173`，同时把该来源加入 `CORS_ALLOWED_ORIGINS`。
 Vite 固定端口并启用 strictPort，避免自动换端口后 CORS 配置失效。
 
-Spring Security 仅放行 `GET /api/health`，其余请求拒绝；关闭表单登录、HTTP Basic 和会话创建，
-保留 CSRF 默认保护。后续新增接口必须明确配置访问规则。目前不提供任何登录/权限功能。
+Spring Security 放行 Health 和明确的基础资料路径，其余路径拒绝。当前无登录和身份凭据，基础资料接口仅用于本机开发。
+仅这组 JSON API 豁免 CSRF；CORS 允许 GET/POST/PUT/PATCH/DELETE，不携带凭据。后续认证阶段重新设计访问控制。
 
 ## Verification
 
@@ -205,7 +215,7 @@ mvn clean test
 mvn clean package
 ```
 
-默认测试使用 mock mapper 验证 HTTP 响应、错误处理、Security 和 CORS，不依赖个人数据库。
+默认测试验证 HTTP 参数校验、错误响应、Security、CORS 和 Service 规则，不依赖个人数据库。
 真实 MySQL 测试默认跳过；先配置上面的 DB 环境变量，再运行：
 
 ```powershell
@@ -214,7 +224,9 @@ mvn clean test
 ```
 
 Bash 等价命令：`DB_INTEGRATION_TEST=true mvn clean test`。
-真实测试使用实际 MySQL，没有 H2 替代或业务表初始化。
+该连接测试使用实际 MySQL，没有 H2 替代或业务表初始化。
+Issue #3 的独立验收另用 `node backend/database/verify-master-data.mjs`，在随机测试库启动真实 HTTP 服务，
+验证 65 项升级与业务 API 行为并自动清理；前置条件和命令见 [验收说明](docs/master-data.md#5-自动验收)。
 
 前端：
 

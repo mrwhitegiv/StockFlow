@@ -11,24 +11,42 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.cors.*;
 
 @Configuration
 public class SecurityConfig {
+    // Temporary local-development API surface. Authentication/RBAC is a later issue.
+    private static final String[] MASTER_DATA = {
+            "/api/categories", "/api/categories/*", "/api/products", "/api/products/*",
+            "/api/products/*/enabled", "/api/products/*/skus", "/api/skus/*",
+            "/api/warehouses", "/api/warehouses/*"
+    };
+
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .cors(Customizer.withDefaults())
+                // These JSON endpoints do not use cookies, HTTP Basic or any ambient credentials.
+                // Revisit this scoped exemption when authentication is implemented.
+                .csrf(csrf -> csrf.ignoringRequestMatchers(MASTER_DATA))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
+                        .requestMatchers(MASTER_DATA).permitAll()
                         .anyRequest().denyAll())
+                .exceptionHandling(errors -> errors
+                        .authenticationEntryPoint((request, response, exception) -> forbidden(response))
+                        .accessDeniedHandler((request, response, exception) -> forbidden(response)))
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .build();
+    }
+
+    private void forbidden(jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        response.setStatus(403);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write("{\"code\":403,\"message\":\"Forbidden\",\"data\":null}");
     }
 
     @Bean
@@ -37,7 +55,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim).filter(origin -> !origin.isEmpty()).toList());
-        config.setAllowedMethods(List.of("GET"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Accept", "Content-Type"));
         config.setAllowCredentials(false);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

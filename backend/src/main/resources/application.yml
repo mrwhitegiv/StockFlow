@@ -2,7 +2,7 @@ spring:
   application:
     name: stockflow
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:stockflow}?connectionTimeZone=UTC&connectTimeout=3000&socketTimeout=3000
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:stockflow}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&connectTimeout=3000&socketTimeout=3000
     username: ${DB_USERNAME:stockflow}
     password: ${DB_PASSWORD:}
     hikari:
@@ -10,6 +10,7 @@ spring:
       validation-timeout: 2000
       maximum-pool-size: 5
 server:
+  address: ${SERVER_ADDRESS:127.0.0.1}
   port: ${SERVER_PORT:8080}
 app:
   cors:
