@@ -30,7 +30,7 @@ public class SecurityConfig {
                 // Revisit this scoped exemption when authentication is implemented.
                 .csrf(csrf -> csrf.ignoringRequestMatchers(MASTER_DATA))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/health", "/api/inventory", "/api/inventory/*").permitAll()
                         .requestMatchers(MASTER_DATA).permitAll()
                         .anyRequest().denyAll())
                 .exceptionHandling(errors -> errors
@@ -59,6 +59,10 @@ public class SecurityConfig {
         config.setAllowedHeaders(List.of("Accept", "Content-Type"));
         config.setAllowCredentials(false);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration inventory = new CorsConfiguration(config);
+        inventory.setAllowedMethods(List.of("GET"));
+        source.registerCorsConfiguration("/api/inventory", inventory);
+        source.registerCorsConfiguration("/api/inventory/**", inventory);
         source.registerCorsConfiguration("/api/**", config);
         return source;
     }
