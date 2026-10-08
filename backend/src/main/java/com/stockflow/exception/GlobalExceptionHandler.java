@@ -32,6 +32,12 @@ public class GlobalExceptionHandler {
         return error(409, "数据约束冲突：记录被引用或关联数据已变化，请刷新后重试");
     }
 
+    @ExceptionHandler(TransientDataAccessException.class)
+    ResponseEntity<ApiResponse<Void>> concurrentWrite(TransientDataAccessException exception) {
+        log.warn("Transient database conflict; transaction rolled back", exception);
+        return error(409, "数据库操作冲突，当前操作已回滚，请刷新后重试");
+    }
+
     @ExceptionHandler(DataAccessResourceFailureException.class)
     ResponseEntity<ApiResponse<Void>> databaseUnavailable(DataAccessResourceFailureException exception) {
         log.warn("Database unavailable", exception);

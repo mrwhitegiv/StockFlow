@@ -10,6 +10,7 @@ import zhCn from 'element-plus/es/locale/lang/zh-cn'
       <RouterLink to="/products">商品管理</RouterLink>
       <RouterLink to="/categories">分类管理</RouterLink>
       <RouterLink to="/warehouses">仓库管理</RouterLink>
+      <RouterLink to="/purchase-orders">采购入库</RouterLink>
       <RouterLink to="/inventory">库存查询</RouterLink>
       <RouterLink to="/">服务状态</RouterLink>
     </nav>

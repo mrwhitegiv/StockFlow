@@ -28,10 +28,17 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 // These JSON endpoints do not use cookies, HTTP Basic or any ambient credentials.
                 // Revisit this scoped exemption when authentication is implemented.
-                .csrf(csrf -> csrf.ignoringRequestMatchers(MASTER_DATA))
+                .csrf(csrf -> csrf.ignoringRequestMatchers(MASTER_DATA)
+                        .ignoringRequestMatchers("/api/purchase-orders", "/api/purchase-orders/**"))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.GET, "/api/health", "/api/inventory", "/api/inventory/*").permitAll()
                         .requestMatchers(MASTER_DATA).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/purchase-orders", "/api/purchase-orders/*").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/purchase-orders", "/api/purchase-orders/*/items",
+                                "/api/purchase-orders/*/approve", "/api/purchase-orders/*/receive",
+                                "/api/purchase-orders/*/complete", "/api/purchase-orders/*/cancel").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/purchase-orders/*/items/*").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/purchase-orders/*/items/*").permitAll()
                         .anyRequest().denyAll())
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint((request, response, exception) -> forbidden(response))
