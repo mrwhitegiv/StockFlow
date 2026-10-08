@@ -1,6 +1,6 @@
 package com.stockflow.entity;
 
-/** Validated stock balance; no public mutation or persistence method. */
+/** Validated, immutable stock balance. Business actions produce a new balance. */
 public record Inventory(long warehouseId, long skuId, long onHandQty, long lockedQty, long version) {
     public Inventory {
         if (warehouseId <= 0 || skuId <= 0) {
@@ -15,6 +15,11 @@ public record Inventory(long warehouseId, long skuId, long onHandQty, long locke
         if (version < 0) {
             throw new IllegalArgumentException("Inventory version must not be negative");
         }
+    }
+
+    public Inventory receive(long quantity) {
+        if (quantity <= 0) throw new IllegalArgumentException("Receipt quantity must be positive");
+        return new Inventory(warehouseId, skuId, Math.addExact(onHandQty, quantity), lockedQty, Math.incrementExact(version));
     }
 
     public long availableQty() {
