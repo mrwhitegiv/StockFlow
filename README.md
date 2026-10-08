@@ -53,11 +53,12 @@ See `docs/product-requirements.md` for the MVP product requirements and engineer
 
 数据库结构见 [设计与执行说明](docs/database-design.md) 和 [ER 图](docs/database-er.md)。
 
-## Current baseline (Issues #1–3)
+## Current baseline (Issues #1–4)
 
 当前已实现前端 → Spring Boot → MySQL 的最小闭环，并提供 15 张 MVP 表的建表脚本、ER 图和数据库约束测试。
 已提供分类、商品、SKU、仓库管理 API 与页面，包括分页、校验、商品禁用和数据库约束保护。
-后端仍是单体应用，未实现登录、JWT、RBAC、库存逻辑、Docker 或中间件。
+已提供只读库存查询，支持仓库/SKU 筛选、分页和可用数量计算。
+后端仍是单体应用，未实现库存变更、登录、JWT、RBAC、Docker 或中间件。
 
 ```text
 backend/    Java 21 / Spring Boot 4.1.1 / MyBatis-Plus 3.5.17
@@ -66,7 +67,7 @@ docs/       产品需求
 ```
 
 后端包：`com.stockflow` 下的 `config`、`controller`、`service`、`mapper`、`dto`、`common`、`exception`。
-请求路径为 Controller → Service → Mapper → MySQL。entity 包映射分类、商品、SKU 和仓库。接口及学习路线见 [Issue #3 使用说明](docs/master-data.md)。
+请求路径为 Controller → Service → Mapper → MySQL。entity 包映射分类、商品、SKU 和仓库。接口及学习路线见 [Issue #3 使用说明](docs/master-data.md) 和 [Issue #4 库存查询](docs/inventory.md)。
 
 ## Requirements
 
@@ -130,6 +131,8 @@ Workbench 可通过 File → Open SQL Script 打开文件并执行全部内容�
 再按 [升级与授权步骤](docs/master-data.md#1-从-issue-2-升级) 为普通后端账户添加四张表的最小写入权限。
 不要重新执行 001 或让后端使用 root。
 
+Issue #4 沿用现有表结构，无新迁移。库存查询只需 SELECT，现有授权已满足，不授予库存写权限。
+
 后端通过环境变量配置连接：
 
 | 环境变量 | 默认值 | 说明 |
@@ -192,7 +195,8 @@ npm run dev
 
 打开 [首页](http://localhost:5173)，页面自动调用后端并显示 `Backend Status: UP`。
 连接失败时显示 DOWN 和提示；修复后点击“重新检查”。
-导航栏可进入分类管理、商品管理和仓库管理，商品行内进入 SKU 管理。首次使用先创建分类。
+导航栏可进入分类管理、商品管理、仓库管理和库存查询，商品行内进入 SKU 管理。首次使用先创建分类。
+库存没有记录时显示空列表；新建基础资料不会自动生成库存。带数据演示见 [隔离验收模式](docs/inventory.md#4-自动验收与浏览器演示vs-code)。
 `package-lock.json` 固定安装结果，后续可使用 `npm ci` 重现依赖。
 
 默认 API 地址是 `http://localhost:8080/api`。需要修改时，将 `frontend/.env.example`
@@ -204,8 +208,8 @@ npm run dev
 请使用 `localhost:5173`，若要用 `127.0.0.1:5173`，同时把该来源加入 `CORS_ALLOWED_ORIGINS`。
 Vite 固定端口并启用 strictPort，避免自动换端口后 CORS 配置失效。
 
-Spring Security 放行 Health 和明确的基础资料路径，其余路径拒绝。当前无登录和身份凭据，基础资料接口仅用于本机开发。
-仅这组 JSON API 豁免 CSRF；CORS 允许 GET/POST/PUT/PATCH/DELETE，不携带凭据。后续认证阶段重新设计访问控制。
+Spring Security 放行 Health GET、明确的基础资料路径和库存 GET，其余路径拒绝。当前无登录和身份凭据，基础资料接口仅用于本机开发。
+仅基础资料 JSON API 豁免 CSRF；基础资料 CORS 允许 GET/POST/PUT/PATCH/DELETE，库存 CORS 仅允许 GET，均不携带凭据。后续认证阶段重新设计访问控制。
 
 ## Verification
 
@@ -227,6 +231,9 @@ Bash 等价命令：`DB_INTEGRATION_TEST=true mvn clean test`。
 该连接测试使用实际 MySQL，没有 H2 替代或业务表初始化。
 Issue #3 的独立验收另用 `node backend/database/verify-master-data.mjs`，在随机测试库启动真实 HTTP 服务，
 验证 65 项升级与业务 API 行为并自动清理；前置条件和命令见 [验收说明](docs/master-data.md#5-自动验收)。
+
+Issue #4 另用 `node backend/database/verify-inventory.mjs`，执行 56 项真实 HTTP/MySQL 检查，使用仅 SELECT 的临时应用账户。
+包括筛选、数量计算、大整数精度、唯一键与 CHECK 约束、写接口拒绝；命令与浏览器演示见 [库存验收说明](docs/inventory.md#4-自动验收与浏览器演示vs-code)。
 
 前端：
 

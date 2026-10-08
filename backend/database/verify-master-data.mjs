@@ -184,7 +184,7 @@ try {
   assert.equal(preflight.status, 200)
   assert.equal(preflight.headers.get('Access-Control-Allow-Origin'), 'http://localhost:5173')
   passed++
-  await api('GET', '/inventory', undefined, 403)
+  await api('PUT', '/inventory/1', { onHandQty: 999 }, 403)
   assert.equal(sql('SELECT COUNT(*) FROM inventory;', database), '0')
   assert.equal(sql('SELECT COUNT(*) FROM inventory_transaction;', database), '0')
   console.log(`SUCCESS: ${passed} checks passed against real HTTP + MySQL`)

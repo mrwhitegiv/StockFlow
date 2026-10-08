@@ -182,7 +182,7 @@ SKU 写入按钮限制，以及恢复启用。浏览器端测试不是用 mock A
 ## 7. 当前安全边界与范围
 
 当前基础资料 API 是无需登录的开发接口；后端默认仅监听 127.0.0.1，勿直接公开部署。
-Security 只放行明确的 Health 和基础资料路径，其他路径拒绝。CORS 允许配置中的明确前端地址，不使用 Cookie/Basic/Session 凭据。
+Security 放行明确的 Health 和基础资料路径；Issue #4 另增加库存 GET，其他路径拒绝。CORS 允许配置中的明确前端地址，不使用 Cookie/Basic/Session 凭据。
 JSON 写接口仅对这组路径豁免 CSRF；未来实现认证时必须重新设计访问控制和 CSRF，不能把 CORS 当作身份认证。
 
 当前没有库存写入 API、库存扣减、订单、JWT、RBAC、Redis 或 Docker。商品禁用也不会修改库存或删除 SKU。
